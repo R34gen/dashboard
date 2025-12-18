@@ -1,0 +1,60 @@
+{
+  "overview": {
+    "total_reviews": 4208,
+    "avg_rating": 2.21,
+    "sentimen_counts": {
+      "negatif": 2791,
+      "positif": 1012,
+      "netral": 405
+    },
+    "sentimen_pct": {
+      "negatif": 66.33,
+      "positif": 24.05,
+      "netral": 9.62
+    }
+  },
+  "topic_summary": [
+    {
+      "jumlah": "Pengelolaan & Verifikasi Data Layanan",
+      "count": 1432,
+      "persentase": 34.03
+    },
+    {
+      "jumlah": "Akses Awal & Proses Pendaftaran Pengguna",
+      "count": 1019,
+      "persentase": 24.22
+    },
+    {
+      "jumlah": "Proses Login & Penyimpanan Data",
+      "count": 912,
+      "persentase": 21.67
+    },
+    {
+      "jumlah": "Kesiapan Sistem & Infrastruktur Aplikasi",
+      "count": 845,
+      "persentase": 20.08
+    }
+  ],
+  "people_insight": {
+    "most_complained": {
+      "topic": "Pengelolaan & Verifikasi Data Layanan",
+      "n": 1432,
+      "low_rate": 0.71,
+      "avg_rating": 2.06,
+      "complaint_score": 1017.0
+    },
+    "most_praised": {
+      "topic": "Proses Login & Penyimpanan Data",
+      "n": 912,
+      "high_rate": 0.33,
+      "avg_rating": 2.53,
+      "praise_score": 301.0
+    },
+    "most_adequate": {
+      "topic": "Akses Awal & Proses Pendaftaran Pengguna",
+      "n": 1019,
+      "avg_rating": 2.43,
+      "low_rate": 0.6
+    }
+  }
+}

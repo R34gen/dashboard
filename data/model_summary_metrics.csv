@@ -1,0 +1,2 @@
+pearson_r,pearson_p,benchmark_mape,sarimax_mape,walkforward_mape,best_order,best_seasonal
+0.5590011221180088,0.0003943872460407918,1.4575443630842566,2.7198548461861303,1.4708629353935272,"(0, 0, 0)","(0, 1, 1, 12)"
