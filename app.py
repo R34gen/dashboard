@@ -13,7 +13,7 @@ st.set_page_config(page_title="People Analytics Dashboard", page_icon="📊", la
 # =========================
 # AUTH (DEMO)
 # =========================
-USERS = {"mahasiswa": "upnvjt"}  # ubah jika ingin
+USERS = {"mahasiswa": "upnvjt"}  # ubah kalau mau
 if "login" not in st.session_state:
     st.session_state.login = False
 
@@ -70,7 +70,7 @@ keluhan4_df  = load_csv(p_keluhan4)
 rating2_df   = load_csv(p_rating2)
 
 # =========================
-# THEME (FIXED)
+# THEME (FIXED + ALERT TEXT FIX)
 # =========================
 st.markdown("""
 <style>
@@ -144,21 +144,6 @@ html, body, [class*="css"]{
   color:rgba(255,255,255,0.92) !important;
 }
 
-/* Insight box (FIX: text always visible) */
-.insight{
-  background:#FFFFFF;
-  border:1px solid rgba(15,23,42,0.10);
-  border-left:5px solid var(--brand);
-  border-radius:18px;
-  padding:14px 14px;
-}
-.insight, .insight *{
-  color: var(--text) !important;
-}
-.insight b{
-  color: var(--text) !important;
-}
-
 /* Buttons */
 .stButton>button{
   border-radius:14px !important;
@@ -177,6 +162,15 @@ div[data-testid="stTextInput"] input{
   color:var(--text) !important;
 }
 div[data-testid="stTextInput"] input::placeholder{ color:var(--subtle) !important; }
+
+/* ✅ FIX: st.info/st.warning/st.success text always dark (prevent white text issue) */
+div[data-testid="stAlert"]{
+  border-radius: 18px !important;
+  border: 1px solid rgba(15,23,42,0.10) !important;
+}
+div[data-testid="stAlert"] *{
+  color: var(--text) !important;
+}
 
 /* Mobile */
 @media (max-width:768px){
@@ -291,14 +285,15 @@ def header_center(title: str, subtitle: str):
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-def insight_block(title, bullets):
-    """FIXED: Use markdown list for guaranteed visibility."""
+def insight_block(title: str, bullets: list[str]):
+    """✅ Guaranteed readable: use Streamlit native alert."""
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown(f"<div class='card-title'>{title}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='insight'>", unsafe_allow_html=True)
-    for b in bullets:
-        st.markdown(f"- {b}", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<p class='card-sub'>Ringkasan otomatis dari file CSV (tanpa asumsi).</p>", unsafe_allow_html=True)
+
+    msg = "\n".join([f"- {b}" for b in bullets])
+    st.info(msg)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 def login_page():
@@ -360,6 +355,7 @@ def dashboard():
                 tmp = rating_df.copy()
                 tmp[col_r_rate] = pd.to_numeric(tmp[col_r_rate], errors="coerce")
                 tmp[col_r_count] = pd.to_numeric(tmp[col_r_count], errors="coerce").fillna(0)
+
                 fig = px.bar(
                     tmp.sort_values(col_r_rate),
                     x=col_r_count, y=col_r_rate,
@@ -369,8 +365,10 @@ def dashboard():
                     color_discrete_sequence=["#1E3A8A"]
                 )
                 fig.update_traces(textposition="outside")
-                fig.update_layout(height=380, margin=dict(l=10, r=10, t=40, b=10),
-                                  xaxis_title="Jumlah Ulasan", yaxis_title="Rating")
+                fig.update_layout(
+                    height=380, margin=dict(l=10, r=10, t=40, b=10),
+                    xaxis_title="Jumlah Ulasan", yaxis_title="Rating"
+                )
                 fig.update_xaxes(**AXIS); fig.update_yaxes(**AXIS)
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -411,9 +409,15 @@ def dashboard():
 
         bullets = []
         if r_ins:
-            bullets.append(f"<b>Rating paling banyak</b>: rating <b>{r_ins['top_rating']}</b> sebanyak <b>{r_ins['top_count']:,}</b> ulasan (distribusi_rating.csv).")
-            bullets.append(f"Ulasan rating <b>1</b> = <b>{r_ins['r1']:,}</b>, rating <b>5</b> = <b>{r_ins['r5']:,}</b>; gabungan ekstrem (1 & 5) = <b>{r_ins['share_ext']:.1f}%</b> dari total (distribusi_rating.csv).")
-        bullets.append(f"Proporsi sentimen: <b>negatif {pct_negatif:.1f}%</b>, positif {pct_positif:.1f}%, netral {pct_netral:.1f}% (distribusi_sentimen.csv).")
+            bullets.append(
+                f"<b>Rating paling banyak</b>: rating <b>{r_ins['top_rating']}</b> sebanyak <b>{r_ins['top_count']:,}</b> ulasan (distribusi_rating.csv)."
+            )
+            bullets.append(
+                f"Ulasan rating <b>1</b> = <b>{r_ins['r1']:,}</b>, rating <b>5</b> = <b>{r_ins['r5']:,}</b>; gabungan ekstrem (1 & 5) = <b>{r_ins['share_ext']:.1f}%</b> dari total (distribusi_rating.csv)."
+            )
+        bullets.append(
+            f"Proporsi sentimen: <b>negatif {pct_negatif:.1f}%</b>, positif {pct_positif:.1f}%, netral {pct_netral:.1f}% (distribusi_sentimen.csv)."
+        )
         insight_block("Key Findings (berdasarkan data)", bullets)
 
     # ---------- TOPIC MODELING ----------
@@ -442,8 +446,10 @@ def dashboard():
                     template=PX_TEMPLATE,
                     color_discrete_sequence=["#2563EB"]
                 )
-                fig.update_layout(height=420, margin=dict(l=10, r=10, t=40, b=10),
-                                  xaxis_title="Jumlah kemunculan", yaxis_title="")
+                fig.update_layout(
+                    height=420, margin=dict(l=10, r=10, t=40, b=10),
+                    xaxis_title="Jumlah kemunculan", yaxis_title=""
+                )
                 fig.update_xaxes(**AXIS); fig.update_yaxes(**AXIS)
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -463,8 +469,10 @@ def dashboard():
                     template=PX_TEMPLATE,
                     color_discrete_sequence=["#DC2626"]
                 )
-                fig.update_layout(height=420, margin=dict(l=10, r=10, t=40, b=10),
-                                  xaxis_title="Jumlah kemunculan", yaxis_title="")
+                fig.update_layout(
+                    height=420, margin=dict(l=10, r=10, t=40, b=10),
+                    xaxis_title="Jumlah kemunculan", yaxis_title=""
+                )
                 fig.update_xaxes(**AXIS); fig.update_yaxes(**AXIS)
                 st.plotly_chart(fig, use_container_width=True)
             else:
