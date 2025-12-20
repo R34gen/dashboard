@@ -411,7 +411,6 @@ with c1:
     show_logo(LOGO_UPN, 175)
 with c2:
     st.markdown('<div class="hero-title">Dashboard Analitik Media Sosial Berbasis Rating Aplikasi SIGA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-sub">Dashboard cerah, kontras aman, dan stabil (export-first) untuk presentasi + laporan akademik.</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="badges">
       <span class="badge">🎓 UPN</span>
