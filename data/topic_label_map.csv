@@ -1,0 +1,16 @@
+sentimen,topic_id,label,action
+negatif,0,Pendaftaran & Verifikasi Akun,"Perjelas alur pendaftaran dan validasi dokumen, tampilkan error message spesifik"
+negatif,1,Aplikasi Lambat / Stuck,Optimasi performa aplikasi dan perbaiki handling loading
+negatif,2,Kendala Input & Validasi Data,Perbaiki form input dan validasi data agar lebih jelas
+negatif,3,Gangguan Login & Update,Perbaiki stabilitas login pasca update dan komunikasikan maintenance
+negatif,4,Error Pasca Instalasi/Upgrade,Lakukan regression testing sebelum rilis versi baru
+negatif,5,Masalah Update via Play Store,Sederhanakan proses update dan sinkronisasi versi aplikasi
+negatif,6,Server Tidak Stabil,Tingkatkan monitoring dan kapasitas server
+negatif,7,Kebingungan Perubahan Versi,Tambahkan panduan singkat setelah update aplikasi
+positif,0,Aplikasi Dinilai Mudah & Bermanfaat,Pertahankan kemudahan penggunaan dan kecepatan layanan
+positif,1,Membantu Akses Layanan,Pertahankan fitur inti yang membantu pengguna
+positif,2,Dukungan Layanan Meski Update,Pertahankan stabilitas fitur saat update
+positif,3,Mendukung Aktivitas Petugas,Perkuat fitur pendukung kerja petugas lapangan
+positif,4,Respons Aplikasi Cukup Cepat,Optimalkan performa agar tetap responsif
+positif,5,Fitur Mendukung Pengelolaan Data,Pertahankan alur pengelolaan data yang sudah berjalan baik
+positif,6,Pengalaman Penggunaan Relatif Lancar,Integrasikan dengan peningkatan UX minor
