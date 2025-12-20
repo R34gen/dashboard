@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from pathlib import Path
-from datetime import datetime
 
 # =========================
 # CONFIG
@@ -54,14 +53,12 @@ def safe_col(df: pd.DataFrame, *names: str):
 # DEPLOYMENT ANALYTICS HELPERS (NEW)
 # =========================
 def coalesce_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    """Ambil nama kolom pertama yang ditemukan dari list kandidat."""
     for c in candidates:
         if c in df.columns:
             return c
     return None
 
 def normalize_sentiment(x) -> str:
-    """Normalisasi label sentimen agar konsisten: positif/negatif/netral."""
     if pd.isna(x):
         return ""
     s = str(x).strip().lower()
@@ -111,12 +108,10 @@ def standardize_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict, str | Non
 @st.cache_data(show_spinner=False)
 def load_topic_label_map(path: Path) -> pd.DataFrame:
     mp = pd.read_csv(path)
-    # Standarisasi minimal
     mp["sentimen"] = mp["sentimen"].astype(str).str.lower().str.strip()
     mp["topic_id"] = pd.to_numeric(mp["topic_id"], errors="coerce")
     mp = mp.dropna(subset=["topic_id"]).copy()
     mp["topic_id"] = mp["topic_id"].astype(int)
-    # Pastikan kolom tersedia
     for col in ["label", "action"]:
         if col not in mp.columns:
             mp[col] = ""
@@ -126,17 +121,14 @@ def load_topic_label_map(path: Path) -> pd.DataFrame:
 # =========================
 # LOAD FILES (fitur lama tetap)
 # =========================
-# Distribusi
 p_rating    = pick_file("distribusi_rating.csv")
 p_sentiment = pick_file("distribusi_sentimen.csv")
 
-# Topic modeling
 p_top_neg    = pick_file("ringkasan_topik_negatif.csv")
 p_top_neg_f  = pick_file("hasil_topic_negatif_full.csv")
 p_top_pos    = pick_file("ringkasan_topik_positif.csv")
 p_top_pos_f  = pick_file("hasil_topic_positif_full.csv")
 
-# People analytics
 p_people_sum = pick_file("people_analytics_summary.csv", "people_analytics_summary (1).csv")
 p_keluhan4   = pick_file("rating_4keatas_tapi_keluhan.csv", "rating_4keatas_tapi_keluhan (1).csv")
 p_rating2    = pick_file("rating_2kebawah_semua_ulasan.csv")
@@ -191,7 +183,7 @@ def login_page():
         if USERS.get(u) == p:
             st.session_state.login = True
             st.success("Login berhasil!")
-            st.experimental_rerun()
+            st.rerun()  # ✅ FIX: ganti experimental_rerun
         else:
             st.error("Username / password salah.")
 
@@ -286,17 +278,16 @@ def dashboard():
         st.dataframe(people_sum, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Jika topic_label_map ada, tampilkan mapping ringkas (bonus)
         if not topic_map.empty:
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.markdown("<div class='card-title'>Mapping Label Topik & Rekomendasi Aksi</div>", unsafe_allow_html=True)
-            st.markdown("<div class='card-sub'>Ini adalah interpretasi analis (bukan output model).</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card-sub'>Interpretasi analis (bukan output model).</div>", unsafe_allow_html=True)
             st.dataframe(topic_map, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>Evidence: Rating ≥ 4 tapi ada keluhan</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-sub'>Membuktikan ulasan rating tinggi bisa tetap mengandung keluhan (insight penting)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-sub'>Membuktikan ulasan rating tinggi bisa tetap mengandung keluhan</div>", unsafe_allow_html=True)
         st.dataframe(keluhan4_df.head(50), use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -306,7 +297,7 @@ def dashboard():
         st.dataframe(rating2_df.head(50), use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.caption("© Dashboard untuk Konversi: Analitik Media Sosial & People Analytics (dan siap dikembangkan untuk Deployment Analytics).")
+    st.caption("© Dashboard untuk Konversi: Analitik Media Sosial & People Analytics (dan siap untuk Deployment Analytics).")
 
 
 # =========================
