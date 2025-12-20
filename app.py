@@ -31,7 +31,6 @@ def pick_file(*names: str) -> Path:
     st.stop()
 
 def pick_file_optional(*names: str) -> Path | None:
-    """Cari file di folder data/ tanpa menghentikan app kalau tidak ada."""
     for n in names:
         p = DATA / n
         if p.exists():
@@ -47,6 +46,60 @@ def safe_col(df: pd.DataFrame, *names: str):
         if n in df.columns:
             return n
     return None
+
+# =========================
+# NEW: MORE ROBUST COLUMN DETECTION FOR DISTRIBUTIONS
+# =========================
+def pick_x_y_columns_for_distribution(df: pd.DataFrame, kind: str):
+    """
+    kind: "rating" or "sentiment"
+    Return (x_col, y_col, err)
+    """
+    cols = [c for c in df.columns]
+
+    # Common y columns
+    y_candidates = ["count", "jumlah", "freq", "frequency", "total", "n", "cnt"]
+    y_col = None
+    for c in y_candidates:
+        if c in cols:
+            y_col = c
+            break
+
+    # If no known y, try: pick numeric column with largest sum as y
+    if y_col is None:
+        numeric_cols = []
+        for c in cols:
+            s = pd.to_numeric(df[c], errors="coerce")
+            if s.notna().sum() >= max(3, int(0.6 * len(df))):
+                numeric_cols.append((c, s.sum()))
+        if numeric_cols:
+            y_col = sorted(numeric_cols, key=lambda x: x[1], reverse=True)[0][0]
+
+    # Common x columns based on kind
+    if kind == "rating":
+        x_candidates = ["rating", "Rating", "rate", "bintang", "stars", "score", "nilai"]
+    else:
+        x_candidates = ["sentimen", "sentiment", "label", "kategori", "class", "kelas"]
+
+    x_col = None
+    for c in x_candidates:
+        if c in cols:
+            x_col = c
+            break
+
+    # If no known x, pick first non-numeric column
+    if x_col is None:
+        for c in cols:
+            s = pd.to_numeric(df[c], errors="coerce")
+            # if mostly not numeric -> treat as label column
+            if s.notna().sum() < int(0.4 * len(df)):
+                x_col = c
+                break
+
+    if x_col is None or y_col is None:
+        return None, None, f"Format kolom tidak terdeteksi. Kolom tersedia: {cols}"
+
+    return x_col, y_col, None
 
 
 # =========================
@@ -101,9 +154,8 @@ def standardize_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict, str | Non
     })
     return df_std, schema, None
 
-
 # =========================
-# TOPIC LABEL MAP (NEW)
+# TOPIC LABEL MAP
 # =========================
 @st.cache_data(show_spinner=False)
 def load_topic_label_map(path: Path) -> pd.DataFrame:
@@ -183,7 +235,7 @@ def login_page():
         if USERS.get(u) == p:
             st.session_state.login = True
             st.success("Login berhasil!")
-            st.rerun()  # ✅ FIX: ganti experimental_rerun
+            st.rerun()
         else:
             st.error("Username / password salah.")
 
@@ -193,7 +245,6 @@ def login_page():
 def dashboard():
     st.title("📊 Dashboard Analitik Medsos & People Analytics")
 
-    # status dataset_final (opsional)
     if p_dataset_final is None:
         st.caption("ℹ️ dataset_final.csv belum ada (opsional). Fitur lama tetap berjalan.")
     elif dataset_err:
@@ -201,7 +252,6 @@ def dashboard():
     else:
         st.caption("✅ dataset_final.csv terdeteksi & skema kolom berhasil distandarkan (siap untuk deployment analytics).")
 
-    # status topic map (opsional)
     if p_topic_map is None:
         st.caption("ℹ️ topic_label_map.csv belum ada (opsional).")
     else:
@@ -218,15 +268,13 @@ def dashboard():
         st.markdown("<div class='card-title'>Distribusi Rating</div>", unsafe_allow_html=True)
         st.markdown("<div class='card-sub'>Ringkasan jumlah ulasan per rating</div>", unsafe_allow_html=True)
 
-        r_col = safe_col(rating_df, "rating", "Rating", "rate", "bintang")
-        c_col = safe_col(rating_df, "count", "jumlah", "freq")
-
-        if r_col and c_col:
-            fig = px.bar(rating_df, x=r_col, y=c_col, template=PX_TEMPLATE)
-            fig.update_layout(height=350, xaxis_title="Rating", yaxis_title="Jumlah")
-            st.plotly_chart(fig, use_container_width=True)
+        x_col, y_col, err = pick_x_y_columns_for_distribution(rating_df, "rating")
+        if err:
+            st.warning(err)
         else:
-            st.warning("Kolom distribusi rating tidak sesuai format (rating/count).")
+            fig = px.bar(rating_df, x=x_col, y=y_col, template=PX_TEMPLATE)
+            fig.update_layout(height=350, xaxis_title=str(x_col), yaxis_title=str(y_col))
+            st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -234,15 +282,13 @@ def dashboard():
         st.markdown("<div class='card-title'>Distribusi Sentimen</div>", unsafe_allow_html=True)
         st.markdown("<div class='card-sub'>Ringkasan jumlah ulasan per sentimen</div>", unsafe_allow_html=True)
 
-        s_col = safe_col(sent_df, "sentimen", "sentiment", "label")
-        c2_col = safe_col(sent_df, "count", "jumlah", "freq")
-
-        if s_col and c2_col:
-            fig2 = px.pie(sent_df, names=s_col, values=c2_col, template=PX_TEMPLATE)
+        x2_col, y2_col, err2 = pick_x_y_columns_for_distribution(sent_df, "sentiment")
+        if err2:
+            st.warning(err2)
+        else:
+            fig2 = px.pie(sent_df, names=x2_col, values=y2_col, template=PX_TEMPLATE)
             fig2.update_layout(height=350)
             st.plotly_chart(fig2, use_container_width=True)
-        else:
-            st.warning("Kolom distribusi sentimen tidak sesuai format (sentimen/count).")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
