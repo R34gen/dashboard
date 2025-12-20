@@ -1,0 +1,9 @@
+dom_topic,priority,frequency,mean_rating,median_rating,top_words
+7,P1 - sangat prioritas,275,1.1672727272727272,1.0,"buka, update, mental, versi, suruh_update, masuk, download, baharu, pas, arah"
+6,P1 - sangat prioritas,239,1.1673640167364017,1.0,"masuk, data, cepat, server, error, gagal, login, hambat, sulit, susah"
+0,P1 - sangat prioritas,224,1.1026785714285714,1.0,"daftar, error, nikah, email, sertifikat, sulit, login, suruh, wajib, elsimil"
+3,P2 - prioritas,265,1.211320754716981,1.0,"masuk, susah, update, pas, ulang, loading, data, login, server_aktif, gagal"
+5,P2 - prioritas,218,1.1743119266055047,1.0,"update, ribet, data, playstore, mudah, elsimil, download, masuk, selesai, login"
+2,P3 - monitoring,196,1.1938775510204083,1.0,"susah, data, jelek, store, verval, buka, masuk, daftar, tulis, arah_play"
+4,P3 - monitoring,181,1.1823204419889504,1.0,"buka, error, muncul, solusi, isi_data, upgrade, instal, input, susah, log"
+1,P3 - monitoring,171,1.1754385964912282,1.0,"muter, masuk, error, siga_mobile, suruh, parah, android, sulit, bolak, min"
