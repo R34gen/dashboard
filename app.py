@@ -5,7 +5,6 @@ import plotly.express as px
 from pathlib import Path
 from datetime import datetime
 import textwrap
-import glob
 
 # ============================================================
 # 0) PAGE CONFIG
@@ -20,32 +19,50 @@ st.set_page_config(
 ROOT = Path(__file__).parent
 DATA = ROOT / "data"
 
+# assets
 LOGO_UPN = ROOT / "logo_upn.png"
 LOGO_BKKBN = ROOT / "logo_bkkbn.png"
 
+# required master
 DATASET_FINAL = DATA / "dataset_final.csv"
+
+# exports you uploaded (topic modeling)
+NEG_TOPICS = DATA / "neg_topics.csv"
+POS_TOPICS = DATA / "pos_topics.csv"
+NEG_SUPPORT = DATA / "neg_support.csv"
+POS_SUPPORT = DATA / "pos_support.csv"
+NEG_EXEMPLARS = DATA / "neg_exemplars.csv"
+POS_EXEMPLARS = DATA / "pos_exemplars.csv"
+NEG_EVAL = DATA / "neg_eval.csv"
+POS_EVAL = DATA / "pos_eval.csv"
+SUMMARY_COUNTS = DATA / "summary_counts.csv"
+
+# people analytics export
+NEG_ACTION = DATA / "neg_action.csv"
+
+# optional: recommended extra files (if you add later)
+TOPIC_LABEL_MAP = DATA / "topic_label_map.csv"   # recommended (manual labels/actions)
+RATING_COUNTS = DATA / "rating_counts.csv"       # recommended (rating distribution export)
 
 PX_TEMPLATE = "plotly_white"
 
 # ============================================================
 # 1) AUTH (LOGIN WAJIB USER+PASS)
-#    - Disarankan taruh credential di Streamlit Secrets:
+#    - Prefer secrets: Streamlit Cloud -> Settings -> Secrets
 #      [auth]
 #      admin="admin123"
 #      reagen="siga2025"
 # ============================================================
 def load_users():
-    # Prefer secrets (lebih aman)
     try:
         if "auth" in st.secrets:
             d = dict(st.secrets["auth"])
             return {k: str(v) for k, v in d.items()}
     except Exception:
         pass
-    # Fallback hardcode (kalau secrets belum diset)
     return {
         "admin": "admin123",
-        "reagen": "siga2025",
+        "reagen": "siga2025"
     }
 
 USERS = load_users()
@@ -59,7 +76,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # ============================================================
-# 2) FORCE BRIGHT UI + CSS (cerah, font hitam, tidak nabrak)
+# 2) FORCE BRIGHT UI + CSS (lebih profesional)
 # ============================================================
 st.markdown("""
 <script>
@@ -70,7 +87,7 @@ try { window.parent.document.documentElement.setAttribute("data-theme", "light")
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"]{
-  background: linear-gradient(180deg, #F6FAFF 0%, #ECF3FF 100%) !important;
+  background: linear-gradient(180deg, #F7FBFF 0%, #EEF5FF 100%) !important;
 }
 section.main > div{ background: transparent !important; }
 
@@ -91,7 +108,7 @@ section.main > div{ background: transparent !important; }
 }
 
 .hero{
-  background: linear-gradient(135deg, rgba(37,99,235,0.16), rgba(99,102,241,0.12)) !important;
+  background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(99,102,241,0.12)) !important;
   border: 1px solid rgba(15,23,42,0.10);
   border-radius: 24px;
   padding: 18px 18px;
@@ -109,8 +126,8 @@ section.main > div{ background: transparent !important; }
   display:inline-flex; align-items:center; gap:6px;
   padding: 6px 10px; border-radius: 999px;
   border: 1px solid rgba(15,23,42,0.12);
-  background: rgba(255,255,255,0.78);
-  font-size: 12px; font-weight: 750;
+  background: rgba(255,255,255,0.80);
+  font-size: 12px; font-weight: 800;
 }
 
 .card{
@@ -121,7 +138,7 @@ section.main > div{ background: transparent !important; }
   box-shadow: 0 10px 24px rgba(2,6,23,0.08) !important;
   margin-bottom: 14px;
 }
-.card-title{ font-size: 18px; font-weight: 900; margin: 0; }
+.card-title{ font-size: 18px; font-weight: 950; margin: 0; }
 .card-sub{ margin-top: 6px; margin-bottom: 12px; font-size: 12px; color: #334155 !important; }
 
 .hr{ height: 1px; background: rgba(15,23,42,0.10); margin: 10px 0; }
@@ -137,12 +154,12 @@ section.main > div{ background: transparent !important; }
   padding: 14px 14px;
   box-shadow: 0 8px 20px rgba(2,6,23,0.06) !important;
 }
-.kpi-k{ font-size: 12px; font-weight: 850; color: #334155 !important; }
-.kpi-v{ font-size: 26px; font-weight: 950; margin-top: 6px; }
+.kpi-k{ font-size: 12px; font-weight: 900; color: #334155 !important; }
+.kpi-v{ font-size: 26px; font-weight: 980; margin-top: 6px; }
 .kpi-note{
   display:inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 999px;
   border: 1px solid rgba(15,23,42,0.12);
-  background: rgba(236,243,255,0.65);
+  background: rgba(236,243,255,0.70);
   color: #334155 !important; font-size: 11px;
 }
 
@@ -159,25 +176,23 @@ section.main > div{ background: transparent !important; }
   border: 1px solid rgba(37,99,235,0.35) !important;
 }
 
-/* Dataframe */
 [data-testid="stDataFrame"]{
   border-radius: 14px; overflow: hidden;
   border: 1px solid rgba(15,23,42,0.10);
 }
 
-/* Sidebar buttons */
 div[data-testid="stSidebar"] button{
   border-radius: 14px !important;
-  font-weight: 900 !important;
+  font-weight: 950 !important;
 }
 
-/* Logout style */
+/* Logout button: hijau-biru lembut (tidak gelap seperti screenshot kamu) */
 .logout-wrap button{
   background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(59,130,246,0.14)) !important;
   border: 1px solid rgba(16,185,129,0.35) !important;
 }
 .logout-wrap button:hover{
-  background: linear-gradient(135deg, rgba(16,185,129,0.25), rgba(59,130,246,0.20)) !important;
+  background: linear-gradient(135deg, rgba(16,185,129,0.28), rgba(59,130,246,0.22)) !important;
 }
 
 /* Inputs */
@@ -195,8 +210,10 @@ def show_logo(path: Path, width: int = 175):
         st.warning(f"Logo tidak ditemukan: {path.name} (pastikan sefolder app.py)")
 
 def card_open(title: str, subtitle: str = ""):
-    st.markdown(f"""<div class="card"><div class="card-title">{title}</div><div class="card-sub">{subtitle}</div>""",
-                unsafe_allow_html=True)
+    st.markdown(
+        f"""<div class="card"><div class="card-title">{title}</div><div class="card-sub">{subtitle}</div>""",
+        unsafe_allow_html=True
+    )
 
 def card_close():
     st.markdown("</div>", unsafe_allow_html=True)
@@ -209,35 +226,27 @@ def nice_number(x):
 
 def safe_read_csv(path: Path) -> pd.DataFrame | None:
     try:
-        if path and path.exists():
+        if path.exists():
             return pd.read_csv(path)
         return None
     except Exception as e:
         st.error(f"Gagal membaca {path.name}: {e}")
         return None
 
-def pick_latest(patterns: list[str]) -> Path | None:
-    """
-    Ambil file terbaru berdasarkan modified time untuk menghindari 'pakai file lama'
-    Contoh patterns: ["ringkasan_topik_negatif*.csv", "ringkasan_topik_neg*.csv"]
-    """
-    found = []
-    for pat in patterns:
-        found += glob.glob(str(DATA / pat))
-    if not found:
-        return None
-    found_paths = [Path(x) for x in found]
-    found_paths.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return found_paths[0]
+def file_ok(p: Path) -> bool:
+    return p.exists()
 
-def file_info(p: Path | None) -> str:
-    if p is None:
-        return "❌ tidak ada"
-    ts = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-    return f"✅ {p.name} (modified: {ts})"
+def file_status_line(p: Path, required=False) -> str:
+    if p.exists():
+        ts = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        return f"✅ {p.name} (modified {ts})"
+    return f"{'❌' if required else '⚠️'} {p.name} (tidak ditemukan)"
+
+def wrap_text(s: str, width=110) -> str:
+    return "\n".join(textwrap.wrap(str(s), width=width))
 
 # ============================================================
-# 4) CORE DATA STANDARDIZATION (core tetap)
+# 4) CORE STANDARDIZATION (dataset_final)
 # ============================================================
 def coalesce_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
     for c in candidates:
@@ -253,88 +262,37 @@ def normalize_sentiment(x) -> str:
     if s in {"neutral","netral","neu"}: return "netral"
     return s
 
-def detect_schema(df: pd.DataFrame) -> dict:
+def standardize_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict, str | None]:
     sent_col  = coalesce_col(df, ["sentimen","sentiment","label_sentimen","label"])
     topic_col = coalesce_col(df, ["topic_id","topic","topik","dominant_topic","dom_topic"])
     rating_col= coalesce_col(df, ["rating","rate","score","bintang","stars"])
     text_col  = coalesce_col(df, ["text","ulasan","review","komentar","steming_data"])
-    return {"sent_col": sent_col, "topic_col": topic_col, "rating_col": rating_col, "text_col": text_col}
 
-def standardize_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict, str | None]:
-    schema = detect_schema(df)
-    miss = [k for k, v in schema.items() if v is None]
-    if miss:
+    schema = {"sent_col": sent_col, "topic_col": topic_col, "rating_col": rating_col, "text_col": text_col}
+    if any(v is None for v in schema.values()):
+        miss = [k for k, v in schema.items() if v is None]
         return df, schema, f"Kolom wajib tidak ditemukan: {', '.join(miss)}"
 
     tmp = df.copy()
-    tmp[schema["sent_col"]] = tmp[schema["sent_col"]].apply(normalize_sentiment)
-    tmp[schema["rating_col"]] = pd.to_numeric(tmp[schema["rating_col"]], errors="coerce")
-    tmp[schema["topic_col"]] = pd.to_numeric(tmp[schema["topic_col"]], errors="coerce")
-    tmp = tmp.dropna(subset=[schema["rating_col"], schema["topic_col"]]).copy()
+    tmp[sent_col] = tmp[sent_col].apply(normalize_sentiment)
+    tmp[rating_col] = pd.to_numeric(tmp[rating_col], errors="coerce")
+    tmp[topic_col] = pd.to_numeric(tmp[topic_col], errors="coerce")
+    tmp = tmp.dropna(subset=[rating_col, topic_col]).copy()
 
     out = pd.DataFrame({
-        "sentimen": tmp[schema["sent_col"]].astype(str).str.lower().str.strip(),
-        "topic_id": tmp[schema["topic_col"]].astype(int),
-        "rating": tmp[schema["rating_col"]].astype(float),
-        "text": tmp[schema["text_col"]].astype(str),
+        "sentimen": tmp[sent_col].astype(str).str.lower().str.strip(),
+        "topic_id": tmp[topic_col].astype(int),
+        "rating": tmp[rating_col].astype(float),
+        "text": tmp[text_col].astype(str),
     })
     return out, schema, None
 
 @st.cache_data(show_spinner=False)
-def load_dataset(path: Path) -> pd.DataFrame:
+def load_dataset_final(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
-@st.cache_data(show_spinner=False)
-def load_topic_map(path: Path) -> pd.DataFrame:
-    mp = pd.read_csv(path)
-    mp["sentimen"] = mp["sentimen"].astype(str).str.lower().str.strip()
-    mp["topic_id"] = pd.to_numeric(mp["topic_id"], errors="coerce")
-    mp = mp.dropna(subset=["topic_id"]).copy()
-    mp["topic_id"] = mp["topic_id"].astype(int)
-    for c in ["label","action"]:
-        if c not in mp.columns:
-            mp[c] = ""
-    return mp[["sentimen","topic_id","label","action"]]
-
-def compute_priority(df_std: pd.DataFrame, sent: str, min_support: int = 20):
-    tmp = df_std[df_std["sentimen"] == sent].copy()
-    if tmp.empty:
-        return None, None, None, "Data kosong untuk sentimen ini."
-
-    summ = (tmp.groupby("topic_id")
-              .agg(frequency=("topic_id","size"),
-                   mean_rating=("rating","mean"),
-                   median_rating=("rating","median"))
-              .reset_index())
-
-    summ = summ[summ["frequency"] >= min_support].copy()
-    if summ.empty:
-        return None, None, None, f"Tidak ada topik dengan support >= {min_support}"
-
-    freq_thr = float(summ["frequency"].median())
-    rate_thr = float(summ["mean_rating"].median())
-
-    def pri(r):
-        hf = r["frequency"] >= freq_thr
-        lr = r["mean_rating"] <= rate_thr
-        if hf and lr: return "P1 (Prioritas Tinggi)"
-        if hf or lr:  return "P2 (Prioritas Sedang)"
-        return "P3 (Prioritas Rendah)"
-
-    summ["priority"] = summ.apply(pri, axis=1)
-    summ = summ.sort_values(["priority","frequency"], ascending=[True, False])
-    return summ, tmp, (freq_thr, rate_thr), None
-
-def exemplars(df_sent: pd.DataFrame, topic_id: int, n: int = 5):
-    sub = df_sent[df_sent["topic_id"] == topic_id].drop_duplicates("text").copy()
-    if sub.empty:
-        return sub
-    sub["len"] = sub["text"].astype(str).str.len()
-    sub = sub.sort_values(["len","rating"], ascending=[False, True]).head(n)
-    return sub[["topic_id","rating","text"]]
-
 # ============================================================
-# 5) LOGIN PAGE (restricted)
+# 5) LOGIN PAGE
 # ============================================================
 def login_page():
     st.markdown('<div class="hero">', unsafe_allow_html=True)
@@ -342,13 +300,11 @@ def login_page():
     with c1:
         show_logo(LOGO_UPN, 170)
     with c2:
-        st.markdown('<div class="hero-title">Dashboard Analitik Media Sosial Berbasis Rating Aplikasi SIGA</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="hero-sub">Akses dibatasi. Login dengan username & password.</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="hero-title">Dashboard Analitik Media Sosial Berbasis Rating Aplikasi SIGA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hero-sub">Akses dibatasi. Login dengan username & password.</div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="badges">
-          <span class="badge">🔒 Restricted Access</span>
+          <span class="badge">🔒 Restricted Login</span>
           <span class="badge">📊 Medsos + People Analytics</span>
           <span class="badge">🚀 Streamlit Deployment</span>
         </div>
@@ -357,7 +313,7 @@ def login_page():
         show_logo(LOGO_BKKBN, 170)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    card_open("Login", "Masukkan kredensial yang valid.")
+    card_open("Login", "Masukkan kredensial yang valid (user+password).")
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
     if st.button("🔑 Login", use_container_width=True):
@@ -369,40 +325,42 @@ def login_page():
             st.error("Username / password salah.")
     card_close()
 
-# Gate
 if not st.session_state.logged_in:
     login_page()
     st.stop()
 
 # ============================================================
-# 6) LOAD REQUIRED DATA
+# 6) LOAD FILES (dataset_final + exports)
 # ============================================================
 if not DATASET_FINAL.exists():
     st.error("File wajib tidak ditemukan: data/dataset_final.csv")
     st.stop()
 
-df_raw = load_dataset(DATASET_FINAL)
+df_raw = load_dataset_final(DATASET_FINAL)
 df_std, schema, err = standardize_dataset(df_raw)
 if err:
     st.error(f"dataset_final.csv invalid: {err}")
     st.info(f"Skema terdeteksi: {schema}")
     st.stop()
 
-# Latest export files (avoid old)
-p_top_neg = pick_latest(["ringkasan_topik_negatif*.csv", "topik_negatif*.csv"])
-p_top_pos = pick_latest(["ringkasan_topik_positif*.csv", "topik_positif*.csv"])
-p_topic_map = pick_latest(["topic_label_map*.csv"])
-p_people_priority = pick_latest(["people_priority*.csv", "people_analytics_prioritas*.csv"])
-p_exemplars = pick_latest(["topic_exemplars*.csv", "exemplars_topik*.csv", "exemplars_topic*.csv"])
+# exports
+neg_topics = safe_read_csv(NEG_TOPICS)
+pos_topics = safe_read_csv(POS_TOPICS)
+neg_support = safe_read_csv(NEG_SUPPORT)
+pos_support = safe_read_csv(POS_SUPPORT)
+neg_ex = safe_read_csv(NEG_EXEMPLARS)
+pos_ex = safe_read_csv(POS_EXEMPLARS)
+neg_eval = safe_read_csv(NEG_EVAL)
+pos_eval = safe_read_csv(POS_EVAL)
+summary_counts = safe_read_csv(SUMMARY_COUNTS)
+neg_action = safe_read_csv(NEG_ACTION)
 
-top_neg = safe_read_csv(p_top_neg) if p_top_neg else None
-top_pos = safe_read_csv(p_top_pos) if p_top_pos else None
-topic_map = load_topic_map(p_topic_map) if p_topic_map else pd.DataFrame()
-people_priority = safe_read_csv(p_people_priority) if p_people_priority else None
-exemplars_file = safe_read_csv(p_exemplars) if p_exemplars else None
+# optional
+topic_label_map = safe_read_csv(TOPIC_LABEL_MAP)
+rating_counts = safe_read_csv(RATING_COUNTS)
 
 # ============================================================
-# 7) SIDEBAR (logout + filters + file status)
+# 7) SIDEBAR (logout + file status + global filters)
 # ============================================================
 with st.sidebar:
     st.markdown("## 🎛️ Kontrol & Navigasi")
@@ -416,17 +374,22 @@ with st.sidebar:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
-
-    st.markdown("### 📁 Export yang sedang dipakai")
-    st.write(f"dataset_final: ✅ {DATASET_FINAL.name}")
-    st.write(f"top_neg: {file_info(p_top_neg)}")
-    st.write(f"top_pos: {file_info(p_top_pos)}")
-    st.write(f"topic_label_map: {file_info(p_topic_map)}")
-    st.write(f"people_priority: {file_info(p_people_priority)}")
-    st.write(f"topic_exemplars: {file_info(p_exemplars)}")
+    st.markdown("### 📁 Status File (data/)")
+    st.write(file_status_line(DATASET_FINAL, required=True))
+    st.write(file_status_line(SUMMARY_COUNTS, required=True))
+    st.write(file_status_line(NEG_TOPICS))
+    st.write(file_status_line(POS_TOPICS))
+    st.write(file_status_line(NEG_SUPPORT))
+    st.write(file_status_line(POS_SUPPORT))
+    st.write(file_status_line(NEG_EXEMPLARS))
+    st.write(file_status_line(POS_EXEMPLARS))
+    st.write(file_status_line(NEG_EVAL))
+    st.write(file_status_line(POS_EVAL))
+    st.write(file_status_line(NEG_ACTION))
+    st.write(file_status_line(TOPIC_LABEL_MAP))
+    st.write(file_status_line(RATING_COUNTS))
 
     st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
-
     st.markdown("### 🔎 Filter Global (opsional)")
     rating_vals = sorted(df_std["rating"].dropna().unique().tolist())
     sent_vals = sorted(df_std["sentimen"].dropna().unique().tolist())
@@ -447,10 +410,8 @@ c1, c2, c3 = st.columns([1.35, 4.3, 1.35], vertical_alignment="center")
 with c1:
     show_logo(LOGO_UPN, 175)
 with c2:
-    st.markdown('<div class="hero-title">Dashboard Analitik Media Sosial Berbasis Rating Aplikasi SIGA</div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="hero-sub">Cerah, kontras aman, dan konsisten untuk presentasi + laporan akademik.</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="hero-title">Dashboard Analitik Media Sosial Berbasis Rating Aplikasi SIGA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-sub">Dashboard cerah, kontras aman, dan stabil (export-first) untuk presentasi + laporan akademik.</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="badges">
       <span class="badge">🎓 UPN</span>
@@ -484,333 +445,488 @@ st.markdown(
 # ============================================================
 # 9) TABS
 # ============================================================
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "🧩 Topic Modeling (Export)", "🧑‍💼 People Analytics", "🚀 Deployment Analytics"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Overview",
+    "🧩 Topic Modeling (Export)",
+    "🧑‍💼 People Analytics (Prioritas & Aksi)",
+    "🧪 Model Quality (Coherence/Perplexity)",
+    "🚀 Deployment (Upload & Export)"
+])
 
 # ------------------------------------------------------------
-# TAB 1: Overview
+# TAB 1: OVERVIEW
 # ------------------------------------------------------------
 with tab1:
-    card_open("Overview", "Distribusi rating & sentimen. Ini dasar untuk narasi pembuka presentasi.")
-    colA, colB = st.columns(2, gap="large")
+    card_open("Overview", "Ringkasan dataset + distribusi rating + distribusi sentimen.")
 
-    dist_rating = df_view.groupby("rating").size().reset_index(name="jumlah_ulasan").sort_values("rating")
-    dist_sent = df_view.groupby("sentimen").size().reset_index(name="jumlah_ulasan").sort_values("jumlah_ulasan", ascending=False)
-
-    with colA:
-        st.markdown("**Distribusi Rating**")
-        fig = px.bar(dist_rating, x="rating", y="jumlah_ulasan", template=PX_TEMPLATE)
-        fig.update_layout(height=360, xaxis_title="Rating", yaxis_title="Jumlah Ulasan")
-        st.plotly_chart(fig, use_container_width=True)
-
-    with colB:
-        st.markdown("**Distribusi Sentimen**")
-        fig2 = px.pie(dist_sent, names="sentimen", values="jumlah_ulasan", template=PX_TEMPLATE)
-        fig2.update_layout(height=360)
-        st.plotly_chart(fig2, use_container_width=True)
+    # Sentiment counts: prefer summary_counts.csv if exists
+    if summary_counts is not None and not summary_counts.empty and set(["sentimen","jumlah"]).issubset(summary_counts.columns):
+        sc = summary_counts.copy()
+        sc["sentimen"] = sc["sentimen"].astype(str).str.lower().str.strip()
+        st.markdown("### Ringkasan jumlah ulasan per sentimen (export)")
+        st.dataframe(sc, use_container_width=True)
+        fig_sc = px.bar(sc, x="sentimen", y="jumlah", template=PX_TEMPLATE)
+        fig_sc.update_layout(height=280, xaxis_title="Sentimen", yaxis_title="Jumlah")
+        st.plotly_chart(fig_sc, use_container_width=True)
+    else:
+        st.warning("summary_counts.csv tidak tersedia / format tidak sesuai. Menghitung dari dataset_final.")
+        sc = df_std.groupby("sentimen").size().reset_index(name="jumlah").sort_values("jumlah", ascending=False)
+        st.dataframe(sc, use_container_width=True)
 
     st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 
-    st.markdown("### Insight cepat (auto)")
-    if total_data > 0:
-        st.write(f"- Total ulasan: **{nice_number(total_data)}**")
-        st.write(f"- Rata-rata rating: **{avg_rating:.2f}**")
-        st.write(f"- Sentimen negatif: **{neg_pct:.2f}%** | positif: **{pos_pct:.2f}%**")
-        if neg_pct >= 60:
-            st.info("Dominasi negatif tinggi → fokus People Analytics pada topik P1 untuk prioritas perbaikan.")
+    # Rating distribution: prefer rating_counts.csv if later added
+    st.markdown("### Distribusi rating")
+    if rating_counts is not None and not rating_counts.empty and set(["rating","jumlah"]).issubset(rating_counts.columns):
+        rc = rating_counts.copy()
+        rc["rating"] = pd.to_numeric(rc["rating"], errors="coerce")
+        rc["jumlah"] = pd.to_numeric(rc["jumlah"], errors="coerce")
+        rc = rc.dropna().sort_values("rating")
+        st.caption("Sumber: rating_counts.csv (export, disarankan untuk konsistensi laporan)")
     else:
-        st.warning("Data kosong setelah filter.")
+        rc = df_view.groupby("rating").size().reset_index(name="jumlah").sort_values("rating")
+        st.caption("Sumber: dataset_final.csv (computed)")
+    fig_rc = px.bar(rc, x="rating", y="jumlah", template=PX_TEMPLATE)
+    fig_rc.update_layout(height=320, xaxis_title="Rating", yaxis_title="Jumlah Ulasan")
+    st.plotly_chart(fig_rc, use_container_width=True)
 
-    with st.expander("🔍 Preview dataset (validasi data terbaru)", expanded=False):
-        st.dataframe(df_view.head(50), use_container_width=True)
+    with st.expander("🔍 Preview dataset_final (validasi data terbaru)", expanded=False):
+        st.dataframe(df_view.head(60), use_container_width=True)
 
     card_close()
 
 # ------------------------------------------------------------
-# TAB 2: Topic Modeling (pakai export terbaru)
+# TAB 2: TOPIC MODELING (EXPORT-FIRST)
 # ------------------------------------------------------------
 with tab2:
     card_open(
-        "Topic Modeling (menggunakan file export terbaru)",
-        "Tab ini sengaja membaca file export terbaru agar konsisten dengan notebook & laporan. Tidak hitung LDA ulang di Streamlit."
+        "Topic Modeling (Export)",
+        "Menampilkan topik POSITIF vs NEGATIF dari file export kamu (tidak menghitung ulang LDA di Streamlit)."
+    )
+
+    left, right = st.columns(2, gap="large")
+
+    # NEGATIVE topics
+    with left:
+        st.markdown("### NEGATIF — Topik & Kata Kunci")
+        if neg_topics is None or neg_topics.empty:
+            st.error("neg_topics.csv tidak ditemukan / kosong.")
+        else:
+            st.dataframe(neg_topics, use_container_width=True)
+            if "topic" in neg_topics.columns:
+                # Try to join with support if available
+                if neg_support is not None and not neg_support.empty and "topic" in neg_support.columns:
+                    join = neg_topics.merge(neg_support, on="topic", how="left")
+                else:
+                    join = neg_topics.copy()
+
+                # Visual: valid_docs if exists, else just show nothing
+                if "valid_docs" in join.columns:
+                    fig = px.bar(join.sort_values("valid_docs", ascending=False), x="topic", y="valid_docs", template=PX_TEMPLATE)
+                    fig.update_layout(height=280, xaxis_title="Topic", yaxis_title="Valid Docs")
+                    st.plotly_chart(fig, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download neg_topics.csv",
+                data=neg_topics.to_csv(index=False).encode("utf-8"),
+                file_name="neg_topics.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    # POSITIVE topics
+    with right:
+        st.markdown("### POSITIF — Topik & Kata Kunci")
+        if pos_topics is None or pos_topics.empty:
+            st.error("pos_topics.csv tidak ditemukan / kosong.")
+        else:
+            st.dataframe(pos_topics, use_container_width=True)
+            if "topic" in pos_topics.columns:
+                if pos_support is not None and not pos_support.empty and "topic" in pos_support.columns:
+                    join = pos_topics.merge(pos_support, on="topic", how="left")
+                else:
+                    join = pos_topics.copy()
+
+                if "valid_docs" in join.columns:
+                    fig = px.bar(join.sort_values("valid_docs", ascending=False), x="topic", y="valid_docs", template=PX_TEMPLATE)
+                    fig.update_layout(height=280, xaxis_title="Topic", yaxis_title="Valid Docs")
+                    st.plotly_chart(fig, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download pos_topics.csv",
+                data=pos_topics.to_csv(index=False).encode("utf-8"),
+                file_name="pos_topics.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
+
+    # Exemplars viewer (important for academic validity)
+    st.markdown("### Bukti: Contoh Ulasan yang Mewakili Topik (Exemplars)")
+    sent_choice = st.radio("Pilih sentimen exemplars", ["negatif", "positif"], horizontal=True)
+
+    if sent_choice == "negatif":
+        ex_df = neg_ex
+    else:
+        ex_df = pos_ex
+
+    if ex_df is None or ex_df.empty:
+        st.warning("File exemplars tidak ada / kosong.")
+    else:
+        # required cols: topic, text, rating
+        need = {"topic", "text", "rating"}
+        if not need.issubset(set(ex_df.columns)):
+            st.error(f"Format exemplars tidak sesuai. Kolom minimal: {need}")
+        else:
+            topics = sorted(ex_df["topic"].dropna().unique().tolist())
+            pick_topic = st.selectbox("Pilih topic", topics, index=0)
+            n_show = st.slider("Jumlah contoh ditampilkan", 3, 20, 8, step=1)
+
+            sub = ex_df[ex_df["topic"] == pick_topic].copy()
+            sub = sub.head(n_show).copy()
+
+            sub_disp = sub.copy()
+            sub_disp["text"] = sub_disp["text"].apply(lambda s: wrap_text(s, 115))
+            st.dataframe(sub_disp[["topic", "rating", "dom_prob", "overlap_topwords", "text"]]
+                         if set(["dom_prob", "overlap_topwords"]).issubset(sub_disp.columns)
+                         else sub_disp[["topic", "rating", "text"]],
+                         use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download exemplars (filtered)",
+                data=sub.to_csv(index=False).encode("utf-8"),
+                file_name=f"{sent_choice}_exemplars_topic_{pick_topic}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    card_close()
+
+# ------------------------------------------------------------
+# TAB 3: PEOPLE ANALYTICS (NEGATIVE PRIORITY + ACTIONS + LABEL BUILDER)
+# ------------------------------------------------------------
+with tab3:
+    card_open(
+        "People Analytics",
+        "Mengubah insight topik menjadi prioritas perbaikan (frequency × impact) + rekomendasi aksi + bukti exemplars. "
+        "Ini inti konversi mata kuliah People Analytics."
+    )
+
+    # People Analytics is strongest for NEGATIVE (you provided neg_action.csv)
+    st.markdown("### A) Prioritas Masalah (NEGATIF) — dari neg_action.csv")
+    if neg_action is None or neg_action.empty:
+        st.error("neg_action.csv tidak ditemukan / kosong. Tab People Analytics butuh file ini.")
+        card_close()
+    else:
+        # Normalize column names if needed
+        na = neg_action.copy()
+
+        # dom_topic -> topic for consistency
+        if "dom_topic" in na.columns and "topic" not in na.columns:
+            na = na.rename(columns={"dom_topic": "topic"})
+
+        # Validate required cols
+        required_cols = {"topic", "priority", "frequency", "mean_rating", "median_rating", "top_words"}
+        if not required_cols.issubset(set(na.columns)):
+            st.error(f"neg_action.csv kolom tidak lengkap. Butuh: {required_cols}")
+            card_close()
+        else:
+            # Optional: merge label map
+            label_map = topic_label_map.copy() if (topic_label_map is not None and not topic_label_map.empty) else pd.DataFrame()
+            if not label_map.empty:
+                # expecting: sentimen, topic_id, label, action
+                # your topics are numeric; map topic->topic_id
+                if set(["sentimen","topic_id","label","action"]).issubset(label_map.columns):
+                    lm = label_map.copy()
+                    lm["sentimen"] = lm["sentimen"].astype(str).str.lower().str.strip()
+                    lm["topic_id"] = pd.to_numeric(lm["topic_id"], errors="coerce")
+                    lm = lm.dropna(subset=["topic_id"]).copy()
+                    lm["topic_id"] = lm["topic_id"].astype(int)
+                    # topic in na might already be int
+                    na["topic"] = pd.to_numeric(na["topic"], errors="coerce")
+                    na = na.dropna(subset=["topic"]).copy()
+                    na["topic"] = na["topic"].astype(int)
+                    lm_neg = lm[lm["sentimen"] == "negatif"].copy()
+                    na = na.merge(lm_neg, left_on="topic", right_on="topic_id", how="left").drop(columns=["topic_id"])
+                else:
+                    st.warning("topic_label_map.csv ada, tapi format kolom tidak sesuai (butuh sentimen,topic_id,label,action).")
+
+            # Filters
+            c1, c2, c3 = st.columns([1.0, 1.0, 1.5], gap="large")
+            with c1:
+                min_freq = st.slider("Min frequency", 1, int(na["frequency"].max()), 20)
+            with c2:
+                show_only_p1 = st.checkbox("Tampilkan hanya P1", value=False)
+            with c3:
+                st.caption("Interpretasi: P1 = prioritas tinggi (masalah sering & impact besar).")
+
+            na_f = na[na["frequency"] >= min_freq].copy()
+            if show_only_p1:
+                na_f = na_f[na_f["priority"].astype(str).str.contains("P1", na=False)].copy()
+
+            # Table
+            cols_show = ["topic", "priority", "frequency", "mean_rating", "median_rating", "top_words"]
+            if "label" in na_f.columns: cols_show.insert(1, "label")
+            if "action" in na_f.columns: cols_show.append("action")
+
+            st.dataframe(na_f[cols_show].sort_values(["priority", "frequency"], ascending=[True, False]), use_container_width=True)
+
+            # Priority matrix scatter (frequency vs mean_rating)
+            fig = px.scatter(
+                na_f,
+                x="frequency",
+                y="mean_rating",
+                color="priority",
+                hover_data=["topic"],
+                template=PX_TEMPLATE,
+            )
+            fig.update_layout(height=420, xaxis_title="Frequency", yaxis_title="Mean Rating (Impact)")
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
+
+            # Exemplars integrated with people analytics
+            st.markdown("### B) Bukti: Exemplars untuk Topik Negatif")
+            if neg_ex is None or neg_ex.empty:
+                st.warning("neg_exemplars.csv tidak tersedia. Exemplars sangat disarankan untuk presentasi.")
+            else:
+                topics = sorted(neg_ex["topic"].dropna().unique().tolist())
+                pick_topic = st.selectbox("Pilih topic untuk exemplars (negatif)", topics, index=0)
+                n_show = st.slider("Jumlah exemplars", 3, 20, 8, step=1, key="pa_ex_n")
+
+                sub = neg_ex[neg_ex["topic"] == pick_topic].head(n_show).copy()
+                sub_disp = sub.copy()
+                sub_disp["text"] = sub_disp["text"].apply(lambda s: wrap_text(s, 115))
+                st.dataframe(sub_disp[["topic", "rating", "dom_prob", "overlap_topwords", "text"]]
+                             if set(["dom_prob","overlap_topwords"]).issubset(sub_disp.columns)
+                             else sub_disp[["topic","rating","text"]],
+                             use_container_width=True)
+
+            st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
+
+            # POSITIVE "people analytics" (what to maintain) - derive from pos exemplars count or dataset
+            st.markdown("### C) People Analytics (POSITIVE) — Hal yang Dipertahankan")
+            st.caption("Kamu belum punya pos_action.csv. Untuk tetap kuat secara akademik, kita buat ringkasan positif dari frekuensi exemplars/topik atau dataset.")
+
+            if pos_ex is not None and not pos_ex.empty and "topic" in pos_ex.columns:
+                pos_freq = pos_ex.groupby("topic").size().reset_index(name="frequency_exemplars").sort_values("frequency_exemplars", ascending=False)
+                st.success("✅ Ringkasan positif dibuat dari pos_exemplars.csv (frekuensi contoh per topik).")
+            else:
+                # fallback from dataset_final
+                pos_freq = df_view[df_view["sentimen"] == "positif"].groupby("topic_id").size().reset_index(name="frequency").rename(columns={"topic_id":"topic"})
+                st.warning("⚠️ pos_exemplars.csv tidak tersedia, ringkasan positif dihitung dari dataset_final (fallback).")
+
+            # Join with pos_topics keywords if possible
+            if pos_topics is not None and not pos_topics.empty and set(["topic","top_words"]).issubset(pos_topics.columns):
+                pos_freq = pos_freq.merge(pos_topics, on="topic", how="left")
+
+            st.dataframe(pos_freq.head(15), use_container_width=True)
+
+            st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
+
+            # Recommended: Label & Action Builder (in-app) -> download topic_label_map.csv
+            st.markdown("### D) (Saran yang aku lakukan) Label & Action Builder (untuk laporan & dashboard)")
+            st.caption(
+                "Kamu butuh label topik + rekomendasi aksi yang manusiawi. Kalau topic_label_map.csv belum ada, "
+                "kamu bisa buat di sini lalu download CSV."
+            )
+
+            # Build base template from available topics
+            neg_topic_ids = sorted(pd.to_numeric(na["topic"], errors="coerce").dropna().astype(int).unique().tolist())
+            pos_topic_ids = []
+            if pos_topics is not None and "topic" in pos_topics.columns:
+                pos_topic_ids = sorted(pd.to_numeric(pos_topics["topic"], errors="coerce").dropna().astype(int).unique().tolist())
+
+            template_rows = []
+            for t in neg_topic_ids:
+                template_rows.append({"sentimen":"negatif", "topic_id":t, "label":"", "action":""})
+            for t in pos_topic_ids:
+                template_rows.append({"sentimen":"positif", "topic_id":t, "label":"", "action":""})
+
+            template_df = pd.DataFrame(template_rows)
+
+            if topic_label_map is not None and not topic_label_map.empty and set(["sentimen","topic_id","label","action"]).issubset(topic_label_map.columns):
+                base = topic_label_map.copy()
+                base["sentimen"] = base["sentimen"].astype(str).str.lower().str.strip()
+                base["topic_id"] = pd.to_numeric(base["topic_id"], errors="coerce")
+                base = base.dropna(subset=["topic_id"]).copy()
+                base["topic_id"] = base["topic_id"].astype(int)
+                # merge to preserve your previous edits
+                template_df = template_df.merge(base, on=["sentimen","topic_id"], how="left", suffixes=("", "_old"))
+                # if existing values exist, prefer them
+                for col in ["label","action"]:
+                    if f"{col}_old" in template_df.columns:
+                        template_df[col] = template_df[f"{col}_old"].fillna(template_df[col])
+                        template_df = template_df.drop(columns=[f"{col}_old"])
+
+            edited = st.data_editor(
+                template_df,
+                use_container_width=True,
+                num_rows="dynamic",
+                hide_index=True
+            )
+
+            st.download_button(
+                "⬇️ Download topic_label_map.csv (hasil edit)",
+                data=edited.to_csv(index=False).encode("utf-8"),
+                file_name="topic_label_map.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+            st.info(
+                "Cara pakai: download topic_label_map.csv → taruh ke folder data/ → redeploy. "
+                "Setelah itu, tabel prioritas akan otomatis menampilkan kolom label & action."
+            )
+
+    card_close()
+
+# ------------------------------------------------------------
+# TAB 4: MODEL QUALITY (EVAL + SUPPORT)
+# ------------------------------------------------------------
+with tab4:
+    card_open(
+        "Model Quality (Academic)",
+        "Bagian ini menguatkan laporan: pemilihan jumlah topik (K) dengan coherence/perplexity dan kualitas topik (support)."
     )
 
     c1, c2 = st.columns(2, gap="large")
 
     with c1:
-        st.markdown("### Topik NEGATIF (Export)")
-        if top_neg is None or top_neg.empty:
-            st.error("File topik negatif tidak ditemukan / kosong. Pastikan export ringkasan_topik_negatif*.csv ke folder data/.")
+        st.markdown("### NEGATIVE — K Selection (coherence/perplexity)")
+        if neg_eval is None or neg_eval.empty:
+            st.warning("neg_eval.csv tidak tersedia.")
         else:
-            st.caption(f"Terpakai: {p_top_neg.name}")
-            st.dataframe(top_neg, use_container_width=True)
-
-            # visual: jumlah ulasan per topic jika kolom tersedia
-            col_topic = None
-            for cand in ["topic_id","topic","topik"]:
-                if cand in top_neg.columns:
-                    col_topic = cand
-                    break
-            col_jml = None
-            for cand in ["jumlah_ulasan","count","freq","frequency"]:
-                if cand in top_neg.columns:
-                    col_jml = cand
-                    break
-
-            if col_topic and col_jml:
-                fig = px.bar(top_neg, x=col_topic, y=col_jml, template=PX_TEMPLATE)
-                fig.update_layout(height=320, xaxis_title="Topic", yaxis_title="Jumlah Ulasan")
+            st.dataframe(neg_eval, use_container_width=True)
+            if set(["K","coherence_cv"]).issubset(neg_eval.columns):
+                fig = px.line(neg_eval, x="K", y="coherence_cv", markers=True, template=PX_TEMPLATE)
+                fig.update_layout(height=280, xaxis_title="K (jumlah topik)", yaxis_title="Coherence (c_v)")
                 st.plotly_chart(fig, use_container_width=True)
-
-            st.download_button(
-                "⬇️ Download topik_negatif_terpakai.csv",
-                data=top_neg.to_csv(index=False).encode("utf-8"),
-                file_name="topik_negatif_terpakai.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+            if set(["K","log_perplexity_test"]).issubset(neg_eval.columns):
+                fig2 = px.line(neg_eval, x="K", y="log_perplexity_test", markers=True, template=PX_TEMPLATE)
+                fig2.update_layout(height=280, xaxis_title="K", yaxis_title="Log Perplexity (test)")
+                st.plotly_chart(fig2, use_container_width=True)
 
     with c2:
-        st.markdown("### Topik POSITIF (Export)")
-        if top_pos is None or top_pos.empty:
-            st.error("File topik positif tidak ditemukan / kosong. Pastikan export ringkasan_topik_positif*.csv ke folder data/.")
+        st.markdown("### POSITIVE — K Selection (coherence/perplexity)")
+        if pos_eval is None or pos_eval.empty:
+            st.warning("pos_eval.csv tidak tersedia.")
         else:
-            st.caption(f"Terpakai: {p_top_pos.name}")
-            st.dataframe(top_pos, use_container_width=True)
-
-            col_topic = None
-            for cand in ["topic_id","topic","topik"]:
-                if cand in top_pos.columns:
-                    col_topic = cand
-                    break
-            col_jml = None
-            for cand in ["jumlah_ulasan","count","freq","frequency"]:
-                if cand in top_pos.columns:
-                    col_jml = cand
-                    break
-
-            if col_topic and col_jml:
-                fig = px.bar(top_pos, x=col_topic, y=col_jml, template=PX_TEMPLATE)
-                fig.update_layout(height=320, xaxis_title="Topic", yaxis_title="Jumlah Ulasan")
+            st.dataframe(pos_eval, use_container_width=True)
+            if set(["K","coherence_cv"]).issubset(pos_eval.columns):
+                fig = px.line(pos_eval, x="K", y="coherence_cv", markers=True, template=PX_TEMPLATE)
+                fig.update_layout(height=280, xaxis_title="K (jumlah topik)", yaxis_title="Coherence (c_v)")
                 st.plotly_chart(fig, use_container_width=True)
+            if set(["K","log_perplexity_test"]).issubset(pos_eval.columns):
+                fig2 = px.line(pos_eval, x="K", y="log_perplexity_test", markers=True, template=PX_TEMPLATE)
+                fig2.update_layout(height=280, xaxis_title="K", yaxis_title="Log Perplexity (test)")
+                st.plotly_chart(fig2, use_container_width=True)
 
-            st.download_button(
-                "⬇️ Download topik_positif_terpakai.csv",
-                data=top_pos.to_csv(index=False).encode("utf-8"),
-                file_name="topik_positif_terpakai.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 
-    st.info("Jika ada banyak file versi lama, app otomatis memilih file terbaru berdasarkan modified time. Jadi tidak akan keambil yang lama lagi.")
+    st.markdown("### Topic Support (kualitas topik per topik)")
+    s1, s2 = st.columns(2, gap="large")
+    with s1:
+        st.markdown("**NEGATIF — Support**")
+        if neg_support is None or neg_support.empty:
+            st.warning("neg_support.csv tidak tersedia.")
+        else:
+            st.dataframe(neg_support, use_container_width=True)
+    with s2:
+        st.markdown("**POSITIF — Support**")
+        if pos_support is None or pos_support.empty:
+            st.warning("pos_support.csv tidak tersedia.")
+        else:
+            st.dataframe(pos_support, use_container_width=True)
+
     card_close()
 
 # ------------------------------------------------------------
-# TAB 3: People Analytics (pakai export bila tersedia, fallback hitung)
+# TAB 5: DEPLOYMENT (UPLOAD & EXPORT)
 # ------------------------------------------------------------
-with tab3:
+with tab5:
     card_open(
-        "People Analytics",
-        "Prioritas masalah (frequency × impact) + label & rekomendasi aksi + contoh ulasan (exemplars)."
+        "Deployment (Upload & Export)",
+        "Untuk konversi mata kuliah deployment aplikasi: bukti aplikasi bisa menerima input baru (CSV) dan mengeluarkan output (export). "
+        "Namun, topic modeling tetap export-first agar stabil."
     )
 
-    ctrl1, ctrl2, ctrl3 = st.columns([1.2, 1.0, 1.2], gap="large")
-    with ctrl1:
-        sent_choice = st.selectbox("Sentimen", ["negatif","positif"], index=0)
-    with ctrl2:
-        min_support = st.slider("Minimum support", 5, 300, 20, step=5)
-    with ctrl3:
-        n_ex = st.slider("Jumlah exemplars/topik", 3, 12, 5)
+    st.markdown("### Upload CSV opsional")
+    uploaded = st.file_uploader("Upload CSV (opsional). Jika kosong, pakai dataset_final.csv (terfilter).", type=["csv"])
 
-    # 1) PRIORITY: pakai export kalau ada dan cocok
-    use_export_priority = False
-    if people_priority is not None and not people_priority.empty and "sentimen" in people_priority.columns:
-        use_export_priority = True
-
-    if use_export_priority:
-        st.success(f"✅ Menggunakan export prioritas: {p_people_priority.name}")
-        pri_df = people_priority.copy()
-        pri_df["sentimen"] = pri_df["sentimen"].astype(str).str.lower().str.strip()
-        pri_df = pri_df[pri_df["sentimen"] == sent_choice].copy()
-
-        # pastikan topic_id int
-        if "topic_id" in pri_df.columns:
-            pri_df["topic_id"] = pd.to_numeric(pri_df["topic_id"], errors="coerce")
-            pri_df = pri_df.dropna(subset=["topic_id"])
-            pri_df["topic_id"] = pri_df["topic_id"].astype(int)
-
-        # fallback filter min_support jika kolom frequency ada
-        if "frequency" in pri_df.columns:
-            pri_df = pri_df[pri_df["frequency"] >= min_support].copy()
-
-        df_sent = df_view[df_view["sentimen"] == sent_choice].copy()
-        thr = None
-    else:
-        st.warning("⚠️ Export people_priority belum ada. App menghitung prioritas dari dataset_final (fallback).")
-        pri_df, df_sent, thr, e = compute_priority(df_view, sent_choice, min_support=min_support)
-        if e:
-            st.error(e)
-            card_close()
-            st.stop()
-
-    # 2) Merge label/action kalau mapping ada
-    if not topic_map.empty:
-        mp = topic_map[topic_map["sentimen"] == sent_choice][["topic_id","label","action"]].copy()
-        pri_df = pri_df.merge(mp, on="topic_id", how="left")
-
-    st.dataframe(pri_df, use_container_width=True)
-
-    # 3) Scatter matrix (kalau punya frequency & mean_rating)
-    if "frequency" in pri_df.columns and "mean_rating" in pri_df.columns:
-        fig = px.scatter(
-            pri_df,
-            x="frequency",
-            y="mean_rating",
-            color="priority" if "priority" in pri_df.columns else None,
-            hover_data=["topic_id"],
-            template=PX_TEMPLATE
-        )
-        fig.update_layout(height=420, xaxis_title="Frequency", yaxis_title="Mean Rating")
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
-
-    # 4) Exemplars: pakai export jika ada, fallback hitung
-    st.markdown("### Exemplars (contoh ulasan representatif per topik)")
-    if "topic_id" not in pri_df.columns or pri_df.empty:
-        st.warning("Tidak ada topik untuk dipilih.")
-        card_close()
-        st.stop()
-
-    topic_ids = pri_df["topic_id"].astype(int).unique().tolist()
-    pick_topic = st.selectbox("Pilih topic_id", topic_ids, index=0)
-
-    use_export_ex = False
-    if exemplars_file is not None and not exemplars_file.empty:
-        cols = set([c.lower() for c in exemplars_file.columns])
-        if {"sentimen","topic_id","rating","text"}.issubset(cols):
-            use_export_ex = True
-
-    if use_export_ex:
-        st.success(f"✅ Menggunakan export exemplars: {p_exemplars.name}")
-        ex = exemplars_file.copy()
-        ex.columns = [c.lower() for c in ex.columns]
-        ex["sentimen"] = ex["sentimen"].astype(str).str.lower().str.strip()
-        ex["topic_id"] = pd.to_numeric(ex["topic_id"], errors="coerce")
-        ex = ex.dropna(subset=["topic_id"])
-        ex["topic_id"] = ex["topic_id"].astype(int)
-        ex = ex[(ex["sentimen"] == sent_choice) & (ex["topic_id"] == int(pick_topic))].copy()
-        ex = ex.head(n_ex)
-        ex = ex[["topic_id","rating","text"]]
-    else:
-        st.warning("⚠️ Export exemplars belum ada. App memilih exemplars dari dataset_final (fallback).")
-        ex = exemplars(df_sent, int(pick_topic), n=n_ex)
-
-    if ex is None or ex.empty:
-        st.warning("Tidak ada exemplars untuk topik ini.")
-    else:
-        ex_disp = ex.copy()
-        ex_disp["text"] = ex_disp["text"].apply(lambda s: "\n".join(textwrap.wrap(str(s), width=110)))
-        st.dataframe(ex_disp, use_container_width=True)
-
-    # 5) Show action suggestion if exists
-    if "action" in pri_df.columns:
-        row = pri_df[pri_df["topic_id"] == int(pick_topic)]
-        if not row.empty:
-            lbl = row["label"].iloc[0] if "label" in row.columns else ""
-            act = row["action"].iloc[0] if "action" in row.columns else ""
-            lbl = "" if pd.isna(lbl) else str(lbl)
-            act = "" if pd.isna(act) else str(act)
-            if lbl.strip() or act.strip():
-                st.success(f"**Label Topik:** {lbl}")
-                st.write(f"**Rekomendasi Aksi:** {act}")
-            else:
-                st.info("Isi topic_label_map.csv untuk menampilkan label & rekomendasi aksi.")
-
-    # Exports from app view
-    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
-    st.markdown("### Export untuk laporan (dari hasil yang sedang tampil)")
-    st.download_button(
-        "⬇️ Download prioritas_tampil.csv",
-        data=pri_df.to_csv(index=False).encode("utf-8"),
-        file_name="prioritas_tampil.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-    st.download_button(
-        "⬇️ Download exemplars_tampil.csv",
-        data=ex.to_csv(index=False).encode("utf-8"),
-        file_name="exemplars_tampil.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-
-    card_close()
-
-# ------------------------------------------------------------
-# TAB 4: Deployment Analytics (upload CSV opsional)
-# ------------------------------------------------------------
-with tab4:
-    card_open("Deployment Analytics", "Bukti end-to-end: upload → proses → output → export. Ini menguatkan mata kuliah deployment aplikasi.")
-
-    uploaded = st.file_uploader("Upload CSV (opsional). Jika kosong, pakai dataset_final (terfilter).", type=["csv"])
     if uploaded is not None:
         try:
             raw = pd.read_csv(uploaded)
-            df_live, _, e2 = standardize_dataset(raw)
-            if e2:
-                st.error(f"CSV upload tidak valid: {e2}")
-                df_live = None
+            df_u, schema_u, err_u = standardize_dataset(raw)
+            if err_u:
+                st.error(f"CSV upload tidak valid: {err_u}")
+                df_live = df_view
+                st.info("Fallback ke dataset_final (terfilter).")
             else:
-                st.success("✅ Dataset upload dipakai.")
+                df_live = df_u
+                st.success("✅ Upload valid. Dataset upload dipakai untuk overview & export.")
         except Exception as e:
             st.error(f"Gagal membaca CSV upload: {e}")
-            df_live = None
+            df_live = df_view
     else:
         df_live = df_view
         st.info("ℹ️ Menggunakan dataset_final (terfilter bila filter aktif).")
 
-    if df_live is None or df_live.empty:
-        st.warning("Tidak ada data untuk dianalisis.")
-        card_close()
-    else:
-        sent_choice = st.selectbox("Sentimen (Deployment)", ["negatif","positif","netral"], index=0)
-        min_support = st.slider("Minimum support (Deployment)", 5, 300, 20, step=5)
+    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 
-        pri_df, df_sent, thr, e = compute_priority(df_live, sent_choice, min_support=min_support)
-        if e:
-            st.error(e)
-            card_close()
-        else:
-            if not topic_map.empty:
-                mp = topic_map[topic_map["sentimen"] == sent_choice][["topic_id","label","action"]].copy()
-                pri_df = pri_df.merge(mp, on="topic_id", how="left")
+    st.markdown("### Output cepat (untuk bukti deployment)")
+    # Export small summaries from uploaded or dataset_final
+    out_sent = df_live.groupby("sentimen").size().reset_index(name="jumlah").sort_values("jumlah", ascending=False)
+    out_rate = df_live.groupby("rating").size().reset_index(name="jumlah").sort_values("rating")
 
-            st.dataframe(pri_df, use_container_width=True)
+    c1, c2 = st.columns(2, gap="large")
+    with c1:
+        st.markdown("**Distribusi Sentimen (dynamic)**")
+        fig = px.bar(out_sent, x="sentimen", y="jumlah", template=PX_TEMPLATE)
+        fig.update_layout(height=280, xaxis_title="Sentimen", yaxis_title="Jumlah")
+        st.plotly_chart(fig, use_container_width=True)
+        st.download_button(
+            "⬇️ Download sentiment_counts_dynamic.csv",
+            data=out_sent.to_csv(index=False).encode("utf-8"),
+            file_name="sentiment_counts_dynamic.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 
-            topic_ids = pri_df["topic_id"].astype(int).tolist()
-            pick_topic = st.selectbox("Pilih topic_id (Deployment)", topic_ids, index=0)
-            ex = exemplars(df_sent, int(pick_topic), n=5)
-            if not ex.empty:
-                ex_disp = ex.copy()
-                ex_disp["text"] = ex_disp["text"].apply(lambda s: "\n".join(textwrap.wrap(str(s), width=110)))
-                st.dataframe(ex_disp, use_container_width=True)
+    with c2:
+        st.markdown("**Distribusi Rating (dynamic)**")
+        fig2 = px.bar(out_rate, x="rating", y="jumlah", template=PX_TEMPLATE)
+        fig2.update_layout(height=280, xaxis_title="Rating", yaxis_title="Jumlah")
+        st.plotly_chart(fig2, use_container_width=True)
+        st.download_button(
+            "⬇️ Download rating_counts_dynamic.csv",
+            data=out_rate.to_csv(index=False).encode("utf-8"),
+            file_name="rating_counts_dynamic.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 
-            st.download_button(
-                "⬇️ Download prioritas_masalah.csv",
-                data=pri_df.to_csv(index=False).encode("utf-8"),
-                file_name="prioritas_masalah.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-            st.download_button(
-                "⬇️ Download exemplars_topik.csv",
-                data=ex.to_csv(index=False).encode("utf-8"),
-                file_name="exemplars_topik.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+    st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
+    st.markdown("### Export ringkas untuk laporan")
+    st.caption("Kamu bisa export subset data untuk lampiran (contoh 200 baris).")
+
+    n_rows = st.slider("Jumlah baris export (subset)", 50, 1000, 200, step=50)
+    subset = df_live.head(n_rows).copy()
+    st.download_button(
+        "⬇️ Download dataset_subset.csv",
+        data=subset.to_csv(index=False).encode("utf-8"),
+        file_name="dataset_subset.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
     card_close()
 
-# Footer
-st.caption(f"© {datetime.now().year} • Build: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} • UI bright + restricted login • Export-first deployment.")
+# ============================================================
+# 10) FOOTER
+# ============================================================
+st.caption(
+    f"© {datetime.now().year} • Export-first dashboard (stabil untuk presentasi) • "
+    f"Build: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+)
