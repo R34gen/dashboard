@@ -926,6 +926,6 @@ with tab5:
 # 10) FOOTER
 # ============================================================
 st.caption(
-    f"© {datetime.now().year} • Export-first dashboard (stabil untuk presentasi) • "
+    f"© {datetime.now().year} • Export-first dashboard• "
     f"Build: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )
